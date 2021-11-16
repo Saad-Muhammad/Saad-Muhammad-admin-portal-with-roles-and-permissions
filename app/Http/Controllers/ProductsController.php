@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProductRequest;
 use App\Products;
+use App\Repositories\ProductsRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
+
 class ProductsController extends Controller
 {
+
+    private $productRepository;
+
        /**
 
      * Display a listing of the resource.
@@ -19,9 +25,10 @@ class ProductsController extends Controller
 
      */
 
-    function __construct()
+    function __construct(ProductsRepository $productRepository)
 
     {
+         $this->productRepository = $productRepository;
 
          $this->middleware('permission:product-list|product-create|product-edit|product-delete', ['only' => ['index','show']]);
 
@@ -89,30 +96,17 @@ class ProductsController extends Controller
 
      */
 
-    public function store(Request $request)
+    public function store(ProductRequest $request)
     {
-      
-        request()->validate([
-            'name' => 'required',
-            'image' => ['nullable'],
-            'detail' => 'required'
-        ]);
-        //check if file attached
-        $newImageName =null;
-        if($file = $request->file('image')){
-           $tmp = explode('.', $file->getClientOriginalName());//get client file name
-           $name = $file->getClientOriginalName();
-           $newImageName = round(microtime(true)).'.'.end($tmp);
-           $file->move(storage_path('app\public\products'), $newImageName);
+       $stored = $this->productRepository->createProduct($request);
+       if ($stored) {
+        return redirect()->route('products.index')
+            ->with('success','Product created successfully.');
+       } else {
+        return redirect()->route('products.index')
+            ->with('danger','Product could not be created.');
        }
-
-       $newImage = null;
-       $newImage = $newImageName?$newImageName: null;
-
-       Products::create(array_merge($request->all(),['image' => $newImage]));
-       return redirect()->route('products.index')
-                        ->with('success','Products created successfully.');
-
+       
     }
 
     
@@ -172,31 +166,18 @@ class ProductsController extends Controller
 
      */
 
-    public function update(Request $request, Products $product)
+    public function update(ProductRequest $request, Products $product)
     {
-        // dd($request->file());
-         request()->validate([
-            'name' => ['required'],
-            'detail' => 'required'
-        ]);
-        $newImageName = null;
+        // dd($request->file())
+        $updated = $this->productRepository->updateProduct($request, $product);
 
-         //check if file attached
-         if($file = $request->file('image')){
-            $tmp = explode('.', $file->getClientOriginalName());//get client file name
-            $name = $file->getClientOriginalName();
-            $newImageName = round(microtime(true)).'.'.end($tmp);
-            $file->move(storage_path('app\public\products'), $newImageName);
+        if ($updated) {
+            return redirect()->route('products.index')
+            ->with('success','Product updated successfully');
+        } else {
+            return redirect()->route('products.index')
+            ->with('danger','Product could not be Updated.');
         }
-
-        $newImage = null;
-        $newImage = $newImageName == null? $product->image:$newImageName;
-        $product->update(array_merge($request->all(),['image' => $newImage]));
-
-        // $product->update($request->all());
-        return redirect()->route('products.index')
-                        ->with('success','Products updated successfully');
-
     }
 
     /**

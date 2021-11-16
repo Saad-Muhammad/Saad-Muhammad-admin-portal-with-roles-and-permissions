@@ -7,6 +7,7 @@ use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UsersRequest;
 use Illuminate\Validation\Rule;
 use App\UserLoginLog;
 
@@ -64,16 +65,8 @@ class UsersController extends Controller
      * @param  \App\Http\Requests\StoreUsersRequest  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(UsersRequest $request)
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'mobile' => ['required', 'numeric', 'digits:10', 'unique:users'],
-            'password' => ['required','min:5'],
-            'roles.*' => ['required']
-        ]);
-
         $user = User::create(array_merge($request->all(),['password' => bcrypt($request->password)]));
         $roles = $request->input('roles') ? $request->input('roles') : [];
         $user->assignRole($roles);
